@@ -1,0 +1,46 @@
+{
+  "name": "google-chat-notifications-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Google Chat Notifications for GitHub Actions",
+  "main": "dist/index.js",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "clean:all": "rm -rf dist node_modules",
+    "clean:hard": "yarn clean:all && rm -f yarn.lock && yarn install --registry https://registry.yarnpkg.com",
+    "upgrade:all": "yarn upgrade --registry https://registry.yarnpkg.com && yarn install --registry https://registry.yarnpkg.com",
+    "format": "prettier --write \"src/**/*.ts\" \"__tests__/**/*.ts\"",
+    "build": "ncc build src/main.ts",
+    "test": "jest",
+    "all": "yarn clean && yarn install --registry https://registry.yarnpkg.com && yarn format && yarn build && yarn test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrksdevops/google-chat-notifications-action.git"
+  },
+  "keywords": [
+    "actions",
+    "node",
+    "setup"
+  ],
+  "author": "mrksdevops",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.27",
+    "@vercel/ncc": "^0.38.1",
+    "jest": "^29.7.0",
+    "jest-circus": "^29.7.0",
+    "prettier": "^3.4.2",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.7.2"
+  }
+}

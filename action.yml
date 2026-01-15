@@ -1,0 +1,25 @@
+name: 'Google Chat Notifications Webhook Action'
+description: 'Google Chat Notifications for GitHub Actions'
+author: 'mrksdevops'
+inputs:
+  title:
+    description: 'Job title.'
+    required: false
+  subtitle:
+    description: 'Job subtitle.'
+    required: false
+  webhookUrl:
+    description: 'Google chat Webhook URL.'
+    required: true
+  status:
+    description: 'Job status.'
+    required: true
+  threadKey:
+    description: 'Thread key.'
+    required: false
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+branding:
+  icon: 'send'
+  color: 'green'
