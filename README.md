@@ -1,5 +1,7 @@
 # Google Chat Notification for GitHub Actions
 
+[![Build & Test](https://github.com/mrksdevops/google-chat-notifications-action/actions/workflows/build.yml/badge.svg)](https://github.com/mrksdevops/google-chat-notifications-action/actions/workflows/build.yml)
+
 Sends a Google Chat notification.
 
 ![Preview](images/preview.png 'Preview')

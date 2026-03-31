@@ -7,6 +7,7 @@ export async function run() {
     const title = core.getInput('title', { required: false }) || 'Build'
     const subtitle = core.getInput('subtitle', { required: false })
     const webhookUrl = core.getInput('webhookUrl', { required: true })
+    core.setSecret(webhookUrl)
     const status = parse(core.getInput('status', { required: true }))
     const threadKey = core.getInput('threadKey', { required: false })
 

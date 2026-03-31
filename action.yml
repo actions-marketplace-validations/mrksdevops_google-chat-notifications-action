@@ -5,20 +5,23 @@ inputs:
   title:
     description: 'Job title.'
     required: false
+    default: 'Build'
   subtitle:
-    description: 'Job subtitle.'
+    description: 'Job subtitle. Recommended: github.event.head_commit.message. Special HTML characters are automatically escaped.'
     required: false
+    default: ''
   webhookUrl:
-    description: 'Google chat Webhook URL.'
+    description: 'Google Chat Webhook URL.'
     required: true
   status:
-    description: 'Job status.'
+    description: 'Job status: success, failure, or cancelled. Recommended: job.status.'
     required: true
   threadKey:
-    description: 'Thread key.'
+    description: 'Optional key to group messages into a single thread.'
     required: false
+    default: ''
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
 branding:
   icon: 'send'

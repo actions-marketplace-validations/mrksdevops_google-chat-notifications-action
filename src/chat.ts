@@ -1,5 +1,4 @@
 import * as github from '@actions/github'
-import axios from 'axios'
 import { Status } from './status'
 
 const statusColorPalette: Record<Status, string> = {
@@ -24,7 +23,12 @@ const statusIcon: Record<Status, string> = {
 }
 
 export const htmlEntities = (str: string) => {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 interface CardHeader {
@@ -209,19 +213,19 @@ export async function notify({
       }
     }
 
-    const response = await axios.post(
-      webhookUrl + (body.thread ? '&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD' : ''),
-      body,
-      { timeout: 10000 }
-    )
+    const url = webhookUrl + (body.thread ? '&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD' : '')
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000),
+    })
 
-    if (response.status !== 200) {
-      throw new Error(`Google Chat notification failed. response status=${response.status}`)
+    if (!response.ok) {
+      const data = await response.text()
+      throw new Error(`Google Chat notification failed. response status=${response.status}, data=${data}`)
     }
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(`Google Chat notification failed. response status=${error.response.status}, data=${JSON.stringify(error.response.data)}`)
-    }
     throw error
   }
 }

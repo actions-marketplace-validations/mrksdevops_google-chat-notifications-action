@@ -8,6 +8,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
@@ -26,11 +29,20 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Verify dist/ is up to date
+        run: |
+          if [ -n "$(git status --porcelain dist/)" ]; then
+            echo "❌ dist/ is out of date. Run 'yarn build' and commit the changes."
+            git diff dist/
+            exit 1
+          fi
+          echo "✅ dist/ is up to date."
+
       - name: Test
         run: yarn test
 
       - name: Google Chat Notification
-        uses: mrksdevops/google-chat-notifications-action@v1.0.0
+        uses: ./
         with:
           title: Build
           subtitle: ${{ github.event.head_commit.message }}

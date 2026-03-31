@@ -1,5 +1,4 @@
 import * as github from '@actions/github'
-import axios from 'axios'
 import {
     htmlEntities,
     extractSpacesKey,
@@ -23,7 +22,8 @@ jest.mock('@actions/github', () => ({
     },
 }))
 
-jest.mock('axios')
+const mockFetch = jest.fn()
+global.fetch = mockFetch
 
 describe('Chat Unit Functions', () => {
     describe('htmlEntities', () => {
@@ -147,9 +147,12 @@ describe('Chat Unit Functions', () => {
     })
 
     describe('notify', () => {
+        beforeEach(() => {
+            mockFetch.mockReset()
+        })
+
         it('should send a notification with correct payload', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            mockedPost.mockResolvedValue({ status: 200 })
+            mockFetch.mockResolvedValue({ ok: true, status: 200 })
 
             await notify({
                 title: 'Test Title',
@@ -158,8 +161,9 @@ describe('Chat Unit Functions', () => {
                 status: 'success',
             })
 
-            expect(mockedPost).toHaveBeenCalledTimes(1)
-            const [url, body] = mockedPost.mock.calls[0] as [string, any]
+            expect(mockFetch).toHaveBeenCalledTimes(1)
+            const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+            const body = JSON.parse(options.body as string)
 
             expect(url).toContain('https://chat.googleapis.com/v1/spaces/SPACE_ID/messages')
             expect(body).toHaveProperty('cardsV2')
@@ -168,8 +172,7 @@ describe('Chat Unit Functions', () => {
         })
 
         it('should handle threading', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            mockedPost.mockResolvedValue({ status: 200 })
+            mockFetch.mockResolvedValue({ ok: true, status: 200 })
 
             await notify({
                 title: 'Thread Test',
@@ -178,14 +181,14 @@ describe('Chat Unit Functions', () => {
                 threadKey: 'thread-123',
             })
 
-            const [url, body] = mockedPost.mock.calls[0] as [string, any]
+            const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+            const body = JSON.parse(options.body as string)
             expect(url).toContain('messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD')
             expect(body.thread.name).toBe('spaces/SPACE_ID/threads/thread-123')
         })
 
         it('should sanitize HTML entities in subtitle and replace newlines', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            mockedPost.mockResolvedValue({ status: 200 })
+            mockFetch.mockResolvedValue({ ok: true, status: 200 })
 
             await notify({
                 title: 'HTML Test',
@@ -194,15 +197,15 @@ describe('Chat Unit Functions', () => {
                 status: 'success',
             })
 
-            const [, body] = mockedPost.mock.calls[0] as [string, any]
+            const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+            const body = JSON.parse(options.body as string)
             expect(body.cardsV2[0].card.header.subtitle).toBe('Title with &lt;tag&gt; &amp; &quot;quotes&quot;')
             // Check sections too
             expect(body.cardsV2[0].card.sections[0].widgets[1].textParagraph.text).toBe('Title with &lt;tag&gt; &amp; &quot;quotes&quot;')
         })
 
         it('should throw error when Google Chat API returns non-200 status', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            mockedPost.mockResolvedValue({ status: 400 })
+            mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => 'Bad Request' })
 
             await expect(
                 notify({
@@ -213,37 +216,12 @@ describe('Chat Unit Functions', () => {
             ).rejects.toThrow('Google Chat notification failed. response status=400')
         })
 
-        it('should include response data in error message when axios request fails with response', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            const mockedIsAxiosError = axios.isAxiosError as unknown as jest.Mock
-
-            mockedIsAxiosError.mockReturnValue(true)
-
-            const errorResponse = {
-                status: 400,
-                data: { error: 'Bad Request' }
-            }
-            mockedPost.mockRejectedValue({
-                isAxiosError: true, // This property is checked by some implementations, but isAxiosError function is what matters
-                response: errorResponse
-            })
+        it('should handle fetch network failure', async () => {
+            mockFetch.mockRejectedValue(new Error('Network Error'))
 
             await expect(
                 notify({
-                    title: 'Axios Fail with Response',
-                    webhookUrl: 'https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=KEY&token=TOKEN',
-                    status: 'failure',
-                }),
-            ).rejects.toThrow('Google Chat notification failed. response status=400, data={"error":"Bad Request"}')
-        })
-
-        it('should handle axios failure', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            mockedPost.mockRejectedValue(new Error('Network Error'))
-
-            await expect(
-                notify({
-                    title: 'Axios Fail',
+                    title: 'Fetch Fail',
                     webhookUrl: 'https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=KEY&token=TOKEN',
                     status: 'success',
                 }),
@@ -251,8 +229,7 @@ describe('Chat Unit Functions', () => {
         })
 
         it('should handle failure and cancelled statuses colors/icons', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            mockedPost.mockResolvedValue({ status: 200 })
+            mockFetch.mockResolvedValue({ ok: true, status: 200 })
 
             // Test failure
             await notify({
@@ -260,7 +237,8 @@ describe('Chat Unit Functions', () => {
                 webhookUrl: 'https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=KEY&token=TOKEN',
                 status: 'failure',
             })
-            const [, failureBody] = mockedPost.mock.calls[0] as [string, any]
+            const [, failureOptions] = mockFetch.mock.calls[0] as [string, RequestInit]
+            const failureBody = JSON.parse(failureOptions.body as string)
             expect(failureBody.cardsV2[0].card.header.imageUrl).toContain('failure.png')
             expect(failureBody.cardsV2[0].card.sections[0].widgets[0].textParagraph.text).toContain('#ff0000')
 
@@ -270,14 +248,14 @@ describe('Chat Unit Functions', () => {
                 webhookUrl: 'https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=KEY&token=TOKEN',
                 status: 'cancelled',
             })
-            const [, cancelledBody] = mockedPost.mock.calls[1] as [string, any]
+            const [, cancelledOptions] = mockFetch.mock.calls[1] as [string, RequestInit]
+            const cancelledBody = JSON.parse(cancelledOptions.body as string)
             expect(cancelledBody.cardsV2[0].card.header.imageUrl).toContain('cancelled.png')
             expect(cancelledBody.cardsV2[0].card.sections[0].widgets[0].textParagraph.text).toContain('#ffc107')
         })
 
         it('should not include thread when spacesKey is missing in URL', async () => {
-            const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>
-            mockedPost.mockResolvedValue({ status: 200 })
+            mockFetch.mockResolvedValue({ ok: true, status: 200 })
 
             await notify({
                 title: 'No Space Test',
@@ -286,7 +264,8 @@ describe('Chat Unit Functions', () => {
                 threadKey: 'some-thread',
             })
 
-            const [, body] = mockedPost.mock.calls[0] as [string, any]
+            const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+            const body = JSON.parse(options.body as string)
             expect(body).not.toHaveProperty('thread')
         })
     })
